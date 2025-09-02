@@ -28,10 +28,39 @@ export type ScanOptions = {
   limit?: number;
   reverse?: boolean;
 };
+export type CountOptions = Omit<ScanOptions, "offset" | "limit">;
+export type DiffEntry = [
+  key: Uint8Array,
+  left: Uint8Array | undefined,
+  right: Uint8Array | undefined,
+];
+export type DiffResult = DiffEntry[];
+export type DiffOptions = {
+  startKey?: Uint8Array;
+  endKey?: Uint8Array;
+  startInclusive?: boolean;
+  endInclusive?: boolean;
+  offset?: number;
+  limit?: number;
+  reverse?: boolean;
+};
+
+// Hierarchy types (mirror ptri docs)
+export type HierarchyScanOptions = Omit<ScanOptions, "offset" | "limit">;
+export type LeafNode = { t: "L"; hash: string; entries: Entry[] };
+export type BranchNode = {
+  t: "B";
+  hash: string;
+  max: Uint8Array[];
+  children: HierarchyNode[];
+};
+export type HierarchyNode = LeafNode | BranchNode;
 
 export type LibraryConfig = {
   mainBranchName?: string; // default "main"
   storeName?: string; // OPFS store name; default "react-ptri"
+  treeDefinition?: { targetFanout: number; minFanout: number };
+  valueChunking?: unknown;
 };
 
 type HistoryState = {
@@ -56,6 +85,10 @@ export type PtriHistoryContextValue = {
   createBranch: (name: BranchName) => Promise<void>;
   get: (key: Uint8Array) => Promise<Uint8Array | undefined>;
   scan: (opts: ScanOptions) => Promise<Entry[]>;
+  count: (opts: CountOptions) => Promise<number>;
+  diff: (left: string, opts?: DiffOptions) => Promise<DiffResult>;
+  scanHierarchy: (opts?: HierarchyScanOptions) => Promise<HierarchyNode>;
+  countHierarchy: (opts?: HierarchyScanOptions) => Promise<number>;
 };
 
 class WriteQueue {
@@ -122,7 +155,12 @@ export function PtriHistoryProvider({
   children: React.ReactNode;
   config?: LibraryConfig;
 }) {
-  const { mainBranchName = "main", storeName = "react-ptri" } = config;
+  const {
+    mainBranchName = "main",
+    storeName = "react-ptri",
+    treeDefinition,
+    valueChunking,
+  } = config;
 
   const [ready, setReady] = useState(false);
   const clientRef = useRef<PtriClient | null>(null);
@@ -138,7 +176,10 @@ export function PtriHistoryProvider({
     let cancelled = false;
     (async () => {
       const store = await createChunkStore({ name: storeName });
-      const client = new PtriClient(store);
+      const client = new PtriClient(store, {
+        ...(treeDefinition ? { treeDefinition } : {}),
+        ...(valueChunking ? { valueChunking } : {}),
+      } as any);
       clientRef.current = client;
       let loaded: Partial<HistoryState> | null = null;
       try {
@@ -344,6 +385,36 @@ export function PtriHistoryProvider({
         if (!clientRef.current) throw new Error("Ptri client not ready");
         const rows = await clientRef.current.scan(rootRef.current, opts as any);
         return rows as Entry[];
+      },
+      count: async (opts: CountOptions) => {
+        if (!clientRef.current) throw new Error("Ptri client not ready");
+        const n = await clientRef.current.count(rootRef.current, opts as any);
+        return n as number;
+      },
+      diff: async (left: string, opts?: DiffOptions) => {
+        if (!clientRef.current) throw new Error("Ptri client not ready");
+        const rows = await clientRef.current.diff(
+          left,
+          rootRef.current,
+          opts as any
+        );
+        return rows as DiffResult;
+      },
+      scanHierarchy: async (opts?: HierarchyScanOptions) => {
+        if (!clientRef.current) throw new Error("Ptri client not ready");
+        const node = await clientRef.current.scanHierarchy(
+          rootRef.current,
+          opts as any
+        );
+        return node as HierarchyNode;
+      },
+      countHierarchy: async (opts?: HierarchyScanOptions) => {
+        if (!clientRef.current) throw new Error("Ptri client not ready");
+        const n = await clientRef.current.countHierarchy(
+          rootRef.current,
+          opts as any
+        );
+        return n as number;
       },
     }),
     [ready, state, mutate, undo, redo, checkout, createBranch]

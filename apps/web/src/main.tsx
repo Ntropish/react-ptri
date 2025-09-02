@@ -1,10 +1,24 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
-import PtriHistoryProvider, { usePtriHistory, b, s } from "react-ptri";
+import PtriHistoryProvider, { usePtriHistory, b, s, type HierarchyNode } from "react-ptri";
 
 function App() {
-  const { ready, rootHash, mutate, get, scan, undo, redo, canUndo, canRedo } = usePtriHistory();
+  const {
+    ready,
+    rootHash,
+    mutate,
+    get,
+    scan,
+    count,
+    diff,
+  scanHierarchy,
+  countHierarchy,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = usePtriHistory();
   const [k, setK] = React.useState("");
   const [v, setV] = React.useState("");
   const [out, setOut] = React.useState("");
@@ -38,6 +52,43 @@ function App() {
         2
       )
     );
+  };
+  const doCount = async () => {
+    const n = await count({
+      startKey: b("a"),
+      endKey: b("z"),
+      endInclusive: true,
+    });
+    setOut(`count(a..z) = ${n}`);
+  };
+  const doDiff = async () => {
+    // perform a self-diff for demo (should be empty)
+    const rows = await diff(rootHash, {
+      startKey: b("a"),
+      endKey: b("z"),
+      endInclusive: true,
+    });
+    setOut(
+      JSON.stringify(
+        rows.map(([K, L, R]) => [s(K), L ? s(L) : null, R ? s(R) : null]),
+        null,
+        2
+      )
+    );
+  };
+  const summarizeHierarchy = (node: HierarchyNode): string => {
+    if (!node) return "<none>";
+    if (node.t === "L") {
+      return `L(${node.entries.length})`;
+    }
+    // Branch: show child summaries
+    const kids = (node.children || []).map((c) => summarizeHierarchy(c));
+    return `B[${kids.join(",")}]`;
+  };
+  const doHierarchy = async () => {
+    const node = await scanHierarchy({ startKey: b("a"), endKey: b("z"), endInclusive: true });
+    const n = await countHierarchy({ startKey: b("a"), endKey: b("z"), endInclusive: true });
+    setOut(`hierarchy: ${summarizeHierarchy(node)}\nleavesTotalEntries: ${n}`);
   };
 
   return (
@@ -77,6 +128,15 @@ function App() {
         </button>
         <button id="scan" onClick={doScan} disabled={!ready}>
           Scan a..z
+        </button>
+        <button id="count" onClick={doCount} disabled={!ready}>
+          Count a..z
+        </button>
+        <button id="diff" onClick={doDiff} disabled={!ready}>
+          Diff (self)
+        </button>
+        <button id="hierarchy" onClick={doHierarchy} disabled={!ready}>
+          Hierarchy a..z
         </button>
       </div>
       <div>

@@ -1,0 +1,21 @@
+{
+  "name": "core",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@tailwindcss/vite": "^4.1.12",
+    "@tanstack/router-plugin": "^1.131.31",
+    "@types/node": "^24.3.0",
+    "@vitejs/plugin-react": "^5.0.2",
+    "vite": "^5.1.4",
+    "vitest": "^3.2.4",
+    "vunt": "^1.0.1"
+  }
+}

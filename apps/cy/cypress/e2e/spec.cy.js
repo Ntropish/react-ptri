@@ -63,17 +63,21 @@ describe("react-ptri demo", () => {
 
     // Count a..z should be >= 1
     cy.get("#count").click();
-    cy.get("#output").invoke("text").should((t) => {
-      expect(t).to.match(/count\(a\.\.z\) = \d+/);
-    });
+    cy.get("#output")
+      .invoke("text")
+      .should((t) => {
+        expect(t).to.match(/count\(a\.\.z\) = \d+/);
+      });
 
     // Self-diff should be empty array
     cy.get("#diff").click();
     cy.get("#output").should("contain", "[");
-    cy.get("#output").invoke("text").should((t) => {
-      const trimmed = t.trim();
-      expect(["[]", "[\n]\n", "[\n]\r\n"]).to.include(trimmed);
-    });
+    cy.get("#output")
+      .invoke("text")
+      .should((t) => {
+        const trimmed = t.trim();
+        expect(["[]", "[\n]\n", "[\n]\r\n"]).to.include(trimmed);
+      });
   });
 
   it("supports hierarchy scan and count via provider APIs", () => {
@@ -88,5 +92,64 @@ describe("react-ptri demo", () => {
     cy.get("#hierarchy").click();
     cy.get("#output").should("contain", "hierarchy:");
     cy.get("#output").should("contain", "leavesTotalEntries:");
+  });
+
+  it("updates live query fingerprints only when data changes", () => {
+    cy.visit("/");
+    cy.get("#status").should("contain", "Ready");
+
+    // Type a key to activate value subscription
+    cy.get("#key").clear().type("lq");
+    // initial fingerprint should populate (even if value missing)
+    cy.get("#live-val-fp")
+      .invoke("text")
+      .should((t) => expect(t.trim()).to.not.equal("-"));
+
+    // capture initial fingerprints
+    let valFp1, rangeFp1;
+    cy.get("#live-val-fp")
+      .invoke("text")
+      .then((t) => (valFp1 = t.trim()));
+    cy.get("#live-range-fp")
+      .invoke("text")
+      .then((t) => (rangeFp1 = t.trim()));
+
+    // set value to 1 -> fingerprints should change
+    cy.get("#val").clear().type("1");
+    cy.get("#set").click();
+    cy.get("#live-val-fp")
+      .invoke("text")
+      .should((t) => expect(t.trim()).to.not.equal(valFp1));
+    cy.get("#live-range-fp")
+      .invoke("text")
+      .should((t) => expect(t.trim()).to.not.equal(rangeFp1));
+
+    // capture second fingerprints
+    let valFp2, rangeFp2;
+    cy.get("#live-val-fp")
+      .invoke("text")
+      .then((t) => (valFp2 = t.trim()));
+    cy.get("#live-range-fp")
+      .invoke("text")
+      .then((t) => (rangeFp2 = t.trim()));
+
+    // set same value again -> fingerprints should remain the same
+    cy.get("#set").click();
+    cy.get("#live-val-fp")
+      .invoke("text")
+      .should((t) => expect(t.trim()).to.equal(valFp2));
+    cy.get("#live-range-fp")
+      .invoke("text")
+      .should((t) => expect(t.trim()).to.equal(rangeFp2));
+
+    // change to 2 -> fingerprints should change again
+    cy.get("#val").clear().type("2");
+    cy.get("#set").click();
+    cy.get("#live-val-fp")
+      .invoke("text")
+      .should((t) => expect(t.trim()).to.not.equal(valFp2));
+    cy.get("#live-range-fp")
+      .invoke("text")
+      .should((t) => expect(t.trim()).to.not.equal(rangeFp2));
   });
 });

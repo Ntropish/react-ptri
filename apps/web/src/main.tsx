@@ -1,7 +1,14 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
-import PtriHistoryProvider, { usePtriHistory, b, s, type HierarchyNode } from "react-ptri";
+import PtriHistoryProvider, {
+  usePtriHistory,
+  b,
+  s,
+  type HierarchyNode,
+  usePtriValue,
+  usePtriRange,
+} from "react-ptri";
 
 function App() {
   const {
@@ -12,8 +19,8 @@ function App() {
     scan,
     count,
     diff,
-  scanHierarchy,
-  countHierarchy,
+    scanHierarchy,
+    countHierarchy,
     undo,
     redo,
     canUndo,
@@ -22,6 +29,13 @@ function App() {
   const [k, setK] = React.useState("");
   const [v, setV] = React.useState("");
   const [out, setOut] = React.useState("");
+  // live queries demo
+  const liveVal = usePtriValue(k ? b(k) : undefined);
+  const liveRange = usePtriRange({
+    startKey: b("a"),
+    endKey: b("z"),
+    endInclusive: true,
+  });
 
   const doSet = async () => {
     if (!k) return setOut("Key required");
@@ -86,8 +100,16 @@ function App() {
     return `B[${kids.join(",")}]`;
   };
   const doHierarchy = async () => {
-    const node = await scanHierarchy({ startKey: b("a"), endKey: b("z"), endInclusive: true });
-    const n = await countHierarchy({ startKey: b("a"), endKey: b("z"), endInclusive: true });
+    const node = await scanHierarchy({
+      startKey: b("a"),
+      endKey: b("z"),
+      endInclusive: true,
+    });
+    const n = await countHierarchy({
+      startKey: b("a"),
+      endKey: b("z"),
+      endInclusive: true,
+    });
     setOut(`hierarchy: ${summarizeHierarchy(node)}\nleavesTotalEntries: ${n}`);
   };
 
@@ -141,6 +163,14 @@ function App() {
       </div>
       <div>
         Current root: <code id="root">{rootHash}</code>
+      </div>
+      <div>
+        Live value fingerprint:{" "}
+        <code id="live-val-fp">{liveVal.fingerprint || "-"}</code>
+      </div>
+      <div>
+        Live range fingerprint:{" "}
+        <code id="live-range-fp">{liveRange.fingerprint || "-"}</code>
       </div>
       <pre id="output">{out}</pre>
     </div>

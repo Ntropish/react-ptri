@@ -89,6 +89,15 @@ export type PtriHistoryContextValue = {
   diff: (left: string, opts?: DiffOptions) => Promise<DiffResult>;
   scanHierarchy: (opts?: HierarchyScanOptions) => Promise<HierarchyNode>;
   countHierarchy: (opts?: HierarchyScanOptions) => Promise<number>;
+  // Fingerprint-powered reads
+  getWithFingerprint: (
+    key: Uint8Array
+  ) => Promise<{ data: Uint8Array | undefined; fingerprint: string }>;
+  scanWithFingerprint: (
+    opts: ScanOptions
+  ) => Promise<{ data: Entry[]; fingerprint: string }>;
+  fingerprintGet: (key: Uint8Array) => Promise<string>;
+  fingerprintScan: (opts: ScanOptions) => Promise<string>;
 };
 
 class WriteQueue {
@@ -255,6 +264,19 @@ export function PtriHistoryProvider({
     );
   }
 
+  // Normalize any fingerprint-like structure into a stable string
+  const normalizeFingerprint = (fp: unknown): string => {
+    if (typeof fp === "string") return fp;
+    try {
+      return JSON.stringify(fp, (_k, v) => {
+        if (v instanceof Uint8Array) return Array.from(v);
+        return v;
+      });
+    } catch {
+      return String(fp);
+    }
+  };
+
   useEffect(() => {
     (async () => {
       try {
@@ -415,6 +437,44 @@ export function PtriHistoryProvider({
           opts as any
         );
         return n as number;
+      },
+      getWithFingerprint: async (key: Uint8Array) => {
+        if (!clientRef.current) throw new Error("Ptri client not ready");
+        const res = (await clientRef.current.getWithFingerprint(
+          rootRef.current,
+          key
+        )) as any;
+        return {
+          data: res.data as Uint8Array | undefined,
+          fingerprint: normalizeFingerprint(res.fingerprint),
+        };
+      },
+      scanWithFingerprint: async (opts: ScanOptions) => {
+        if (!clientRef.current) throw new Error("Ptri client not ready");
+        const res = (await clientRef.current.scanWithFingerprint(
+          rootRef.current,
+          opts as any
+        )) as any;
+        return {
+          data: res.data as Entry[],
+          fingerprint: normalizeFingerprint(res.fingerprint),
+        };
+      },
+      fingerprintGet: async (key: Uint8Array) => {
+        if (!clientRef.current) throw new Error("Ptri client not ready");
+        const fp = (await clientRef.current.fingerprintGet(
+          rootRef.current,
+          key
+        )) as any;
+        return normalizeFingerprint(fp);
+      },
+      fingerprintScan: async (opts: ScanOptions) => {
+        if (!clientRef.current) throw new Error("Ptri client not ready");
+        const fp = (await clientRef.current.fingerprintScan(
+          rootRef.current,
+          opts as any
+        )) as any;
+        return normalizeFingerprint(fp);
       },
     }),
     [ready, state, mutate, undo, redo, checkout, createBranch]

@@ -10,11 +10,18 @@
     "lint": "eslint \"src/**/*.ts\""
   },
   "dependencies": {
-    "@repo/ui": "workspace:*"
+    "@repo/ui": "workspace:*",
+    "react-ptri": "workspace:*",
+    "ptri": "^1.0.7",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "vunt": "^1.0.1"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+  "@types/react": "^18.3.3",
+  "@types/react-dom": "^18.3.0",
     "eslint": "^8.57.0",
     "typescript": "5.5.4",
     "vite": "^5.1.4"

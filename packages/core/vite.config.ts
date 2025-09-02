@@ -14,14 +14,11 @@ export default defineConfig({
       formats: ["es", "cjs"],
     },
     outDir: "dist",
-    rollupOptions: {},
+    rollupOptions: {
+      external: ["react", "react-dom"],
+    },
   },
-  plugins: [dts()],
-
-  test: {
-    globals: true,
-    environment: "jsdom",
-  },
+  plugins: [dts({ include: ["src"] })],
   resolve: {
     alias: {
       "@": resolve(__dirname, "./src"),

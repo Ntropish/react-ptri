@@ -76,6 +76,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.0.2
         version: 5.0.2(vite@5.1.4)
+      ptri:
+        specifier: ^1.0.7
+        version: 1.0.7
       vite:
         specifier: ^5.1.4
         version: 5.1.4(@types/node@24.3.0)
@@ -2798,6 +2801,10 @@ packages:
 
   /proxy-from-env@1.0.0:
     resolution: {integrity: sha512-F2JHgJQ1iqwnHDcQjVBsq3n/uoaFL+iPW/eAeL7kVxy/2RrWaN4WroKjjvbsoRtv0ftelNyC01bjRhn/bhcf4A==}
+    dev: false
+
+  /ptri@1.0.7:
+    resolution: {integrity: sha512-Zk3A6PdqrgQ6OhrYON00XgFaEkg2jSXRPA/DLvth+kkoV2VvmDqtdSCXJ+1Y5tHO5tJpaNYHOsxgDFdGIpFcww==}
     dev: false
 
   /pump@3.0.3:

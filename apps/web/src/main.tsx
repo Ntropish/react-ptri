@@ -7,7 +7,7 @@ function App() {
   const { ready, rootHash, mutate, get, scan } = usePtriHistory();
   const [k, setK] = React.useState("");
   const [v, setV] = React.useState("");
-  const [out, setOut] = React.useState<string>("");
+  const [out, setOut] = React.useState("");
 
   const doSet = async () => {
     if (!k) return setOut("Key required");

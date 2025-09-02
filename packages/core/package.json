@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "ptri": "^1.0.7",
+    "vitest": "^3.2.4",
     "vunt": "^1.0.1"
   },
   "devDependencies": {

@@ -20,7 +20,8 @@ app.innerHTML = `
   </div>
 `;
 
-const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
+const $ = <T extends HTMLElement>(sel: string) =>
+  document.querySelector<T>(sel)!;
 const status = $("#status");
 const rootEl = $("#root");
 const output = $("#output");
@@ -34,7 +35,8 @@ let client: PtriClient;
 let root = "";
 
 function show(obj: unknown) {
-  output.textContent = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
+  output.textContent =
+    typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
 }
 
 async function init() {
@@ -75,5 +77,5 @@ btnScan.addEventListener("click", async () => {
 
 init().catch((e) => {
   status.textContent = "Init failed";
-  show(String((e as any)?.message || e));
+  show(String(e?.message || e));
 });

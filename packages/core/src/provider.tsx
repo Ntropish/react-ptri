@@ -140,12 +140,58 @@ export function PtriHistoryProvider({
       const store = await createChunkStore({ name: storeName });
       const client = new PtriClient(store);
       clientRef.current = client;
-      const root = await client.create();
+      let loaded: Partial<HistoryState> | null = null;
+      try {
+        // @ts-ignore OPFS experimental
+        const rootDir = await navigator.storage?.getDirectory?.();
+        if (rootDir) {
+          // @ts-ignore
+          const folder = await rootDir.getDirectoryHandle?.("react-ptri", {
+            create: false,
+          });
+          if (folder) {
+            // @ts-ignore
+            const file = await folder.getFileHandle("history.json", {
+              create: false,
+            });
+            const blob = await file.getFile();
+            const txt = await blob.text();
+            const data = JSON.parse(txt);
+            if (data && typeof data === "object") {
+              loaded = {
+                currentRoot: data.currentRoot || "",
+                currentBranch:
+                  data.currentBranch ||
+                  (data.branches && Object.keys(data.branches)[0]) ||
+                  "main",
+                undoStack: Array.isArray(data.undoStack) ? data.undoStack : [],
+                redoStack: Array.isArray(data.redoStack) ? data.redoStack : [],
+                branches:
+                  data.branches && typeof data.branches === "object"
+                    ? data.branches
+                    : {},
+              } as Partial<HistoryState>;
+            }
+          }
+        }
+      } catch {
+        // ignore load errors
+      }
+
+      let root = loaded?.currentRoot || "";
+      if (!root) {
+        root = await client.create();
+      }
       if (cancelled) return;
       setState((prev: HistoryState) => ({
-        ...prev,
         currentRoot: root,
-        branches: { ...prev.branches, [prev.currentBranch]: root },
+        currentBranch: loaded?.currentBranch || prev.currentBranch,
+        undoStack: loaded?.undoStack || [],
+        redoStack: loaded?.redoStack || [],
+        branches: {
+          ...(loaded?.branches || {}),
+          [loaded?.currentBranch || prev.currentBranch]: root,
+        },
       }));
       setReady(true);
     })().catch((e) => console.error("PtriHistoryProvider init failed", e));

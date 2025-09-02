@@ -4,7 +4,7 @@ import "./style.css";
 import PtriHistoryProvider, { usePtriHistory, b, s } from "react-ptri";
 
 function App() {
-  const { ready, rootHash, mutate, get, scan } = usePtriHistory();
+  const { ready, rootHash, mutate, get, scan, undo, redo, canUndo, canRedo } = usePtriHistory();
   const [k, setK] = React.useState("");
   const [v, setV] = React.useState("");
   const [out, setOut] = React.useState("");
@@ -45,6 +45,12 @@ function App() {
       <h1>react-ptri demo</h1>
       <div id="status">{ready ? "Ready" : "Initializing..."}</div>
       <div className="controls">
+        <button id="undo" onClick={() => void undo()} disabled={!canUndo}>
+          Undo
+        </button>
+        <button id="redo" onClick={() => void redo()} disabled={!canRedo}>
+          Redo
+        </button>
         <label>
           Key{" "}
           <input

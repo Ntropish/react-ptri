@@ -74,6 +74,7 @@ export type PtriHistoryContextValue = {
   canUndo: boolean;
   canRedo: boolean;
   mutate: (ops: MutationOps) => Promise<RootHash>;
+  checkout: (root: RootHash) => Promise<RootHash>;
   undo: () => Promise<boolean>;
   redo: () => Promise<boolean>;
   get: (key: Uint8Array) => Promise<Uint8Array | undefined>;
@@ -242,6 +243,21 @@ export function PtriHistoryProvider({
     return next;
   }, []);
 
+  const checkout = useCallback(async (root: RootHash) => {
+    if (!root) throw new Error("checkout requires a non-empty root hash");
+    setState((prev: HistoryState) => {
+      const atTip = prev.index === prev.timeline.length - 1;
+      const base = atTip
+        ? prev.timeline
+        : prev.timeline.slice(0, prev.index + 1);
+      const timeline = [...base, root];
+      const index = timeline.length - 1;
+      rootRef.current = root; // sync immediately
+      return { timeline, index };
+    });
+    return root;
+  }, []);
+
   const undo = useCallback(async () => {
     if (state.index <= 0) return false;
     const newIndex = state.index - 1;
@@ -268,6 +284,7 @@ export function PtriHistoryProvider({
       canUndo: state.index > 0,
       canRedo: state.index < state.timeline.length - 1,
       mutate,
+      checkout,
       undo,
       redo,
       get: async (key: Uint8Array) => {
@@ -349,7 +366,7 @@ export function PtriHistoryProvider({
         return normalizeFingerprint(fp);
       },
     }),
-    [ready, state, mutate, undo, redo]
+    [ready, state, mutate, checkout, undo, redo]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

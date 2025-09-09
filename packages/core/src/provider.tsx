@@ -55,6 +55,14 @@ export type BranchNode = {
 };
 export type HierarchyNode = LeafNode | BranchNode;
 
+// History scan types
+export type HistoryScanOptions = {
+  offset?: number; // items to skip from the starting side
+  limit?: number; // max items to return
+  reverse?: boolean; // false => redo-direction (newer), true => undo-direction (older)
+};
+export type HistoryScanResult = { data: RootHash[]; total: number };
+
 export type LibraryConfig = {
   mainBranchName?: string; // default "main"
   storeName?: string; // OPFS store name; default "react-ptri"
@@ -73,10 +81,12 @@ export type PtriHistoryContextValue = {
   rootHash: RootHash;
   canUndo: boolean;
   canRedo: boolean;
+  historyOffsetFromHead: number; // 0 when at head; >0 when undone
   mutate: (ops: MutationOps) => Promise<RootHash>;
   checkout: (root: RootHash) => Promise<RootHash>;
   undo: () => Promise<boolean>;
   redo: () => Promise<boolean>;
+  historyScan: (opts?: HistoryScanOptions) => Promise<HistoryScanResult>;
   get: (key: Uint8Array) => Promise<Uint8Array | undefined>;
   scan: (opts: ScanOptions) => Promise<Entry[]>;
   count: (opts: CountOptions) => Promise<number>;
@@ -258,6 +268,42 @@ export function PtriHistoryProvider({
     return root;
   }, []);
 
+  const historyScan = useCallback(
+    async (opts: HistoryScanOptions = {}): Promise<HistoryScanResult> => {
+      const { offset = 0, limit, reverse = false } = opts;
+      const { timeline, index } = state;
+      const headIndex = timeline.length - 1;
+      if (!timeline.length) return { data: [], total: 0 };
+
+      if (reverse) {
+        // undo-direction (older commits): indices [index-1 .. 0]
+        const total = Math.max(0, index);
+        if (total === 0) return { data: [], total };
+        const startList = timeline.slice(0, index).reverse();
+        const start = Math.min(Math.max(0, offset), total);
+        const end =
+          typeof limit === "number" && limit >= 0
+            ? Math.min(start + limit, total)
+            : total;
+        const data = startList.slice(start, end);
+        return { data, total };
+      } else {
+        // redo-direction (newer commits): indices [index+1 .. head]
+        const total = Math.max(0, headIndex - index);
+        if (total === 0) return { data: [], total };
+        const startList = timeline.slice(index + 1); // already forward order
+        const start = Math.min(Math.max(0, offset), total);
+        const end =
+          typeof limit === "number" && limit >= 0
+            ? Math.min(start + limit, total)
+            : total;
+        const data = startList.slice(start, end);
+        return { data, total };
+      }
+    },
+    [state]
+  );
+
   const undo = useCallback(async () => {
     if (state.index <= 0) return false;
     const newIndex = state.index - 1;
@@ -283,10 +329,15 @@ export function PtriHistoryProvider({
       rootHash: state.timeline[state.index] || "",
       canUndo: state.index > 0,
       canRedo: state.index < state.timeline.length - 1,
+      historyOffsetFromHead: Math.max(
+        0,
+        state.timeline.length - 1 - state.index
+      ),
       mutate,
       checkout,
       undo,
       redo,
+      historyScan,
       get: async (key: Uint8Array) => {
         if (!clientRef.current) throw new Error("Ptri client not ready");
         const v = await clientRef.current.get(rootRef.current, key);
@@ -366,7 +417,7 @@ export function PtriHistoryProvider({
         return normalizeFingerprint(fp);
       },
     }),
-    [ready, state, mutate, checkout, undo, redo]
+    [ready, state, mutate, checkout, undo, redo, historyScan]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

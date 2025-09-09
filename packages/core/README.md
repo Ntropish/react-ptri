@@ -163,10 +163,12 @@ type PtriHistoryContextValue = {
   rootHash: RootHash;
   canUndo: boolean;
   canRedo: boolean;
+  historyOffsetFromHead: number; // 0 when at head; > 0 when undone
   mutate: (ops: MutationOps) => Promise<RootHash>;
   checkout: (root: RootHash) => Promise<RootHash>; // append a given root to history
   undo: () => Promise<boolean>;
   redo: () => Promise<boolean>;
+  historyScan: (opts?: HistoryScanOptions) => Promise<HistoryScanResult>;
   get: (key: Uint8Array) => Promise<Uint8Array | undefined>;
   scan: (opts: ScanOptions) => Promise<Entry[]>;
   count: (opts: CountOptions) => Promise<number>;
@@ -194,6 +196,8 @@ Behavior
 - `undo`/`redo` move the current root pointer; no branching.
 - All reads are performed against the current root and are therefore time-travel aware.
 - Fingerprints are normalized into stable strings for reliable comparisons.
+- `historyOffsetFromHead` reports how far you are from the head (0 means at head). Useful to signal undone state.
+- `historyScan({ offset, limit, reverse })` pages through history hashes without start/end keys. When `reverse` is `true`, you scan toward older commits (undo stack). When `false`, you scan toward newer commits (redo stack).
 
 #### usePtriValue(key?: Uint8Array)
 
@@ -291,6 +295,21 @@ return (
     <div>Range fp: {range.fingerprint ?? "-"}</div>
   </>
 );
+```
+
+### Browsing history (undo/redo stacks)
+
+```ts
+// how far from head are we?
+const { historyOffsetFromHead, historyScan } = usePtriHistory();
+
+// list up to 10 older commits (undo direction)
+const older = await historyScan({ reverse: true, offset: 0, limit: 10 });
+console.log(older.total, older.data);
+
+// list up to 10 newer commits (redo direction)
+const newer = await historyScan({ reverse: false, offset: 0, limit: 10 });
+console.log(newer.total, newer.data);
 ```
 
 ## Installation

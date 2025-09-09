@@ -25,6 +25,9 @@ function App() {
     redo,
     canUndo,
     canRedo,
+    checkout,
+    historyScan,
+    historyOffsetFromHead,
   } = usePtriHistory();
   const [k, setK] = React.useState("");
   const [v, setV] = React.useState("");
@@ -69,6 +72,13 @@ function App() {
     offset: liveScanOffset ? Number(liveScanOffset) : undefined,
     limit: liveScanLimit ? Number(liveScanLimit) : undefined,
   });
+
+  // history browsing
+  const [histOffset, setHistOffset] = React.useState<string>("0");
+  const [histLimit, setHistLimit] = React.useState<string>("10");
+  const [histReverse, setHistReverse] = React.useState<boolean>(false);
+  const [histOut, setHistOut] = React.useState<string>("[]");
+  const [checkoutRoot, setCheckoutRoot] = React.useState<string>("");
 
   const doSet = async () => {
     if (!k) return setOut("Key required");
@@ -182,6 +192,20 @@ function App() {
       const msg = e instanceof Error ? e.message : String(e);
       setOut(`Batch parse/apply error: ${msg}`);
     }
+  };
+
+  const doHistoryScan = async () => {
+    const res = await historyScan({
+      offset: histOffset ? Number(histOffset) : 0,
+      limit: histLimit ? Number(histLimit) : undefined,
+      reverse: histReverse,
+    });
+    setHistOut(JSON.stringify(res, null, 2));
+  };
+
+  const doCheckout = async () => {
+    if (!checkoutRoot) return;
+    await checkout(checkoutRoot);
   };
 
   // Branch actions removed
@@ -334,6 +358,60 @@ function App() {
         </fieldset>
       </div>
       {/* Branch controls removed */}
+      <div className="controls">
+        <fieldset>
+          <legend>History</legend>
+          <div>
+            Offset from head:{" "}
+            <code id="history-offset">{historyOffsetFromHead}</code>
+          </div>
+          <div>
+            <label>
+              Offset{" "}
+              <input
+                id="hist-scan-offset"
+                value={histOffset}
+                onChange={(e) => setHistOffset(e.target.value)}
+              />
+            </label>
+            <label>
+              Limit{" "}
+              <input
+                id="hist-scan-limit"
+                value={histLimit}
+                onChange={(e) => setHistLimit(e.target.value)}
+              />
+            </label>
+            <label>
+              <input
+                id="hist-scan-reverse"
+                type="checkbox"
+                checked={histReverse}
+                onChange={(e) => setHistReverse(e.target.checked)}
+              />
+              reverse (undo direction)
+            </label>
+            <button id="hist-scan" onClick={doHistoryScan} disabled={!ready}>
+              Scan History
+            </button>
+          </div>
+          <div>
+            <label>
+              Checkout root{" "}
+              <input
+                id="checkout-root"
+                value={checkoutRoot}
+                onChange={(e) => setCheckoutRoot(e.target.value)}
+                placeholder="root hash"
+              />
+            </label>
+            <button id="checkout" onClick={doCheckout} disabled={!ready}>
+              Checkout
+            </button>
+          </div>
+          <pre id="history-output">{histOut}</pre>
+        </fieldset>
+      </div>
       <div className="controls">
         <fieldset>
           <legend>Live Value Fingerprint</legend>

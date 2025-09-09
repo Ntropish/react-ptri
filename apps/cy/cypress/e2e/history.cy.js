@@ -130,4 +130,122 @@ describe("react-ptri history APIs", () => {
         expect(res.data.length).to.be.greaterThan(0);
       });
   });
+
+  it("supports scanning and paging over history in both directions after 20+ commits (limit=10)", () => {
+    cy.visit("/");
+    cy.get("#status").should("contain", "Ready");
+
+    const ts = Date.now();
+    const ns = `hp:${ts}:`;
+
+    // Baseline undo total
+    cy.get("#hist-scan-offset").clear().type("0");
+    cy.get("#hist-scan-limit").clear().type("1000");
+    cy.get("#hist-scan-reverse").check();
+    cy.get("#hist-scan").click();
+    cy.get("#history-output")
+      .invoke("text")
+      .then((txt) => {
+        const res = JSON.parse(txt.trim());
+        cy.wrap(res.total).as("baselineUndoTotal");
+      });
+
+    const commit = (i) => {
+      cy.get("#root")
+        .invoke("text")
+        .then((t) => cy.wrap(t.trim()).as(`before${i}`));
+      cy.get("#key").clear().type(`${ns}${i}`);
+      cy.get("#val")
+        .clear()
+        .type(`v${i}`, { parseSpecialCharSequences: false });
+      cy.get("#set").click();
+      cy.get(`@before${i}`).then((b) => {
+        cy.get("#root")
+          .invoke("text")
+          .should((t) => expect(t.trim()).to.not.equal(b));
+      });
+    };
+
+    // Make 20 commits
+    for (let i = 0; i < 20; i++) commit(i);
+
+    // Verify undo-direction total increased by at least 20
+    cy.get("#hist-scan-offset").clear().type("0");
+    cy.get("#hist-scan-limit").clear().type("1000");
+    cy.get("#hist-scan-reverse").check(); // undo direction
+    cy.get("#hist-scan").click();
+    cy.get("#history-output")
+      .invoke("text")
+      .then((txt) => {
+        const res = JSON.parse(txt.trim());
+        cy.get("@baselineUndoTotal").then((base) => {
+          expect(res.total).to.be.greaterThan(Number(base) + 19);
+        });
+      });
+
+    // Page through with limit 10: page 1
+    cy.get("#hist-scan-offset").clear().type("0");
+    cy.get("#hist-scan-limit").clear().type("10");
+    cy.get("#hist-scan").click();
+    cy.get("#history-output")
+      .invoke("text")
+      .then((txt) => {
+        const res = JSON.parse(txt.trim());
+        expect(res.data.length).to.equal(10);
+        cy.wrap(res.data).as("page1");
+      });
+
+    // Next page
+    cy.get("#hist-scan-offset").clear().type("10");
+    cy.get("#hist-scan-limit").clear().type("10");
+    cy.get("#hist-scan").click();
+    cy.get("#history-output")
+      .invoke("text")
+      .then((txt) => {
+        const res = JSON.parse(txt.trim());
+        // We created 20, so expect a full second page
+        expect(res.data.length).to.equal(10);
+        cy.get("@page1").then((p1) => {
+          const set = new Set([...(p1 || []), ...res.data]);
+          expect(set.size).to.equal(20);
+        });
+      });
+
+    // Undo 20 to build a redo stack of at least 20
+    for (let i = 0; i < 20; i++) {
+      cy.get("#undo").should("not.be.disabled").click();
+    }
+    cy.get("#history-offset")
+      .invoke("text")
+      .should((t) => expect(parseInt(t.trim(), 10)).to.be.greaterThan(0));
+
+    // Redo-direction page 1
+    cy.get("#hist-scan-reverse").uncheck(); // redo direction
+    cy.get("#hist-scan-offset").clear().type("0");
+    cy.get("#hist-scan-limit").clear().type("10");
+    cy.get("#hist-scan").click();
+    cy.get("#history-output")
+      .invoke("text")
+      .then((txt) => {
+        const res = JSON.parse(txt.trim());
+        expect(res.total).to.be.greaterThan(0);
+        expect(res.data.length).to.equal(10);
+        cy.wrap(res.data).as("redoPage1");
+      });
+
+    // Redo-direction page 2
+    cy.get("#hist-scan-offset").clear().type("10");
+    cy.get("#hist-scan-limit").clear().type("10");
+    cy.get("#hist-scan").click();
+    cy.get("#history-output")
+      .invoke("text")
+      .then((txt) => {
+        const res = JSON.parse(txt.trim());
+        expect(res.data.length).to.equal(10);
+        cy.get("@redoPage1").then((p1) => {
+          const set = new Set([...(p1 || []), ...res.data]);
+          expect(set.size).to.equal(20);
+        });
+      });
+  });
 });

@@ -98,58 +98,84 @@ describe("react-ptri demo", () => {
     cy.visit("/");
     cy.get("#status").should("contain", "Ready");
 
-    // Type a key to activate value subscription
-    cy.get("#key").clear().type("lq");
+    // Type a key to activate value subscription and use same key for writes
+    const k = `lq:${Date.now()}`;
+    cy.get("#live-key").clear().type(k);
+    cy.get("#key").clear().type(k);
     // initial fingerprint should populate (even if value missing)
     cy.get("#live-val-fp")
       .invoke("text")
       .should((t) => expect(t.trim()).to.not.equal("-"));
 
-    // capture initial fingerprints
-    let valFp1, rangeFp1;
+    // capture initial fingerprints (aliases)
     cy.get("#live-val-fp")
       .invoke("text")
-      .then((t) => (valFp1 = t.trim()));
+      .then((t) => cy.wrap(t.trim()).as("valFp1"));
     cy.get("#live-range-fp")
       .invoke("text")
-      .then((t) => (rangeFp1 = t.trim()));
+      .then((t) => cy.wrap(t.trim()).as("rangeFp1"));
 
-    // set value to 1 -> fingerprints should change
-    cy.get("#val").clear().type("1");
+    // write a unique value to guarantee a change
+    const v1 = `v-${Date.now()}`;
+    // capture current root to wait for commit (alias)
+    cy.get("#root")
+      .invoke("text")
+      .then((t) => cy.wrap(t.trim()).as("rootBefore1"));
+    cy.get("#val").clear().type(v1);
     cy.get("#set").click();
-    cy.get("#live-val-fp")
-      .invoke("text")
-      .should((t) => expect(t.trim()).to.not.equal(valFp1));
-    cy.get("#live-range-fp")
-      .invoke("text")
-      .should((t) => expect(t.trim()).to.not.equal(rangeFp1));
+    // wait for root to change first (commit boundary)
+    cy.get("@rootBefore1").then((rootBefore) => {
+      cy.get("#root")
+        .invoke("text")
+        .should((t) => {
+          expect(t.trim()).to.not.equal(rootBefore);
+        });
+    });
+    cy.get("@valFp1").then((valFp1) => {
+      cy.get("#live-val-fp")
+        .invoke("text")
+        .should((t) => expect(t.trim()).to.not.equal(valFp1));
+    });
+    cy.get("@rangeFp1").then((rangeFp1) => {
+      cy.get("#live-range-fp")
+        .invoke("text")
+        .should((t) => expect(t.trim()).to.not.equal(rangeFp1));
+    });
 
     // capture second fingerprints
-    let valFp2, rangeFp2;
     cy.get("#live-val-fp")
       .invoke("text")
-      .then((t) => (valFp2 = t.trim()));
+      .then((t) => cy.wrap(t.trim()).as("valFp2"));
     cy.get("#live-range-fp")
       .invoke("text")
-      .then((t) => (rangeFp2 = t.trim()));
+      .then((t) => cy.wrap(t.trim()).as("rangeFp2"));
 
     // set same value again -> fingerprints should remain the same
     cy.get("#set").click();
-    cy.get("#live-val-fp")
-      .invoke("text")
-      .should((t) => expect(t.trim()).to.equal(valFp2));
-    cy.get("#live-range-fp")
-      .invoke("text")
-      .should((t) => expect(t.trim()).to.equal(rangeFp2));
+    cy.get("@valFp2").then((valFp2) => {
+      cy.get("#live-val-fp")
+        .invoke("text")
+        .should((t) => expect(t.trim()).to.equal(valFp2));
+    });
+    cy.get("@rangeFp2").then((rangeFp2) => {
+      cy.get("#live-range-fp")
+        .invoke("text")
+        .should((t) => expect(t.trim()).to.equal(rangeFp2));
+    });
 
-    // change to 2 -> fingerprints should change again
-    cy.get("#val").clear().type("2");
+    // change to a different value -> fingerprints should change again
+    const v2 = `${v1}-x`;
+    cy.get("#val").clear().type(v2);
     cy.get("#set").click();
-    cy.get("#live-val-fp")
-      .invoke("text")
-      .should((t) => expect(t.trim()).to.not.equal(valFp2));
-    cy.get("#live-range-fp")
-      .invoke("text")
-      .should((t) => expect(t.trim()).to.not.equal(rangeFp2));
+    cy.get("@valFp2").then((valFp2) => {
+      cy.get("#live-val-fp")
+        .invoke("text")
+        .should((t) => expect(t.trim()).to.not.equal(valFp2));
+    });
+    cy.get("@rangeFp2").then((rangeFp2) => {
+      cy.get("#live-range-fp")
+        .invoke("text")
+        .should((t) => expect(t.trim()).to.not.equal(rangeFp2));
+    });
   });
 });

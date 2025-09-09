@@ -16,7 +16,7 @@ const sameBytes = (a?: Uint8Array, b?: Uint8Array) => {
  * bytes are equal to avoid re-renders.
  */
 export function usePtriValue(key?: Uint8Array) {
-  const { rootHash, getWithFingerprint } = usePtriHistory();
+  const { rootHash, fingerprintGet, get } = usePtriHistory();
   const [state, setState] = useState<{
     data: Uint8Array | undefined;
     fingerprint: string | undefined;
@@ -36,9 +36,11 @@ export function usePtriValue(key?: Uint8Array) {
     }
     (async () => {
       try {
-        const { data, fingerprint } = await getWithFingerprint(key);
+        const fingerprint = await fingerprintGet(key);
         if (cancelled) return;
         if (fingerprint !== prevFp.current) {
+          const data = await get(key);
+          if (cancelled) return; // guard against stale updates after async fetch
           const same = sameBytes(prevData.current, data);
           prevFp.current = fingerprint;
           prevData.current = same ? prevData.current : data;
@@ -57,7 +59,10 @@ export function usePtriValue(key?: Uint8Array) {
     return () => {
       cancelled = true;
     };
-  }, [rootHash, key?.toString()]);
+  }, [
+    rootHash,
+    key ? Array.from(key).join(",") : undefined, // stable dep key for Uint8Array
+  ]);
 
   return state;
 }
@@ -67,7 +72,7 @@ export function usePtriValue(key?: Uint8Array) {
  * Updates only when the fingerprint changes.
  */
 export function usePtriRange(opts?: ScanOptions) {
-  const { rootHash, scanWithFingerprint } = usePtriHistory();
+  const { rootHash, fingerprintScan, scan } = usePtriHistory();
   const [state, setState] = useState<{
     data: Entry[];
     fingerprint: string | undefined;
@@ -98,9 +103,11 @@ export function usePtriRange(opts?: ScanOptions) {
     }
     (async () => {
       try {
-        const { data, fingerprint } = await scanWithFingerprint(opts);
+        const fingerprint = await fingerprintScan(opts);
         if (cancelled) return;
         if (fingerprint !== prevFp.current) {
+          const data = await scan(opts);
+          if (cancelled) return; // guard against stale updates
           prevFp.current = fingerprint;
           prevData.current = data;
           setState({ data, fingerprint, loading: false });

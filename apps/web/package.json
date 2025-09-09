@@ -7,15 +7,12 @@
     "dev": "vite --clearScreen false",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "eslint \"src/**/*.ts\""
+    "lint": "eslint \"src/**/*.{ts,tsx}\""
   },
   "dependencies": {
-    "@repo/ui": "workspace:*",
     "react-ptri": "workspace:*",
-    "ptri": "^1.0.7",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "vunt": "^1.0.1"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

@@ -29,12 +29,45 @@ function App() {
   const [k, setK] = React.useState("");
   const [v, setV] = React.useState("");
   const [out, setOut] = React.useState("");
+  // scan/count/hierarchy options (defaults keep existing tests green)
+  const [scanStart, setScanStart] = React.useState("a");
+  const [scanEnd, setScanEnd] = React.useState("z");
+  const [scanStartInc, setScanStartInc] = React.useState(true);
+  const [scanEndInc, setScanEndInc] = React.useState(true);
+  const [scanReverse, setScanReverse] = React.useState(false);
+  const [scanOffset, setScanOffset] = React.useState<string>("");
+  const [scanLimit, setScanLimit] = React.useState<string>("");
+
+  // diff options
+  const [diffLeft, setDiffLeft] = React.useState<string>("");
+
+  // batch ops JSON
+  const [opsJson, setOpsJson] = React.useState<string>(
+    '{"set":[["demo","value"]]}'
+  );
+
+  // Branch UI removed in simplified linear-history model
+
   // live queries demo
-  const liveVal = usePtriValue(k ? b(k) : undefined);
+  // Isolated controls for live fingerprints (independent from top form)
+  const [liveKey, setLiveKey] = React.useState<string>("");
+  const [liveScanStart, setLiveScanStart] = React.useState("a");
+  const [liveScanEnd, setLiveScanEnd] = React.useState("z");
+  const [liveScanStartInc, setLiveScanStartInc] = React.useState(true);
+  const [liveScanEndInc, setLiveScanEndInc] = React.useState(true);
+  const [liveScanReverse, setLiveScanReverse] = React.useState(false);
+  const [liveScanOffset, setLiveScanOffset] = React.useState<string>("");
+  const [liveScanLimit, setLiveScanLimit] = React.useState<string>("");
+
+  const liveVal = usePtriValue(liveKey ? b(liveKey) : undefined);
   const liveRange = usePtriRange({
-    startKey: b("a"),
-    endKey: b("z"),
-    endInclusive: true,
+    startKey: liveScanStart ? b(liveScanStart) : undefined,
+    endKey: liveScanEnd ? b(liveScanEnd) : undefined,
+    startInclusive: liveScanStartInc,
+    endInclusive: liveScanEndInc,
+    reverse: liveScanReverse,
+    offset: liveScanOffset ? Number(liveScanOffset) : undefined,
+    limit: liveScanLimit ? Number(liveScanLimit) : undefined,
   });
 
   const doSet = async () => {
@@ -55,9 +88,13 @@ function App() {
   };
   const doScan = async () => {
     const rows = await scan({
-      startKey: b("a"),
-      endKey: b("z"),
-      endInclusive: true,
+      startKey: scanStart ? b(scanStart) : undefined,
+      endKey: scanEnd ? b(scanEnd) : undefined,
+      startInclusive: scanStartInc,
+      endInclusive: scanEndInc,
+      reverse: scanReverse,
+      offset: scanOffset ? Number(scanOffset) : undefined,
+      limit: scanLimit ? Number(scanLimit) : undefined,
     });
     setOut(
       JSON.stringify(
@@ -69,18 +106,24 @@ function App() {
   };
   const doCount = async () => {
     const n = await count({
-      startKey: b("a"),
-      endKey: b("z"),
-      endInclusive: true,
+      startKey: scanStart ? b(scanStart) : undefined,
+      endKey: scanEnd ? b(scanEnd) : undefined,
+      startInclusive: scanStartInc,
+      endInclusive: scanEndInc,
+      reverse: scanReverse,
     });
     setOut(`count(a..z) = ${n}`);
   };
   const doDiff = async () => {
-    // perform a self-diff for demo (should be empty)
-    const rows = await diff(rootHash, {
-      startKey: b("a"),
-      endKey: b("z"),
-      endInclusive: true,
+    const left = diffLeft || rootHash; // default to self-diff
+    const rows = await diff(left, {
+      startKey: scanStart ? b(scanStart) : undefined,
+      endKey: scanEnd ? b(scanEnd) : undefined,
+      startInclusive: scanStartInc,
+      endInclusive: scanEndInc,
+      reverse: scanReverse,
+      offset: scanOffset ? Number(scanOffset) : undefined,
+      limit: scanLimit ? Number(scanLimit) : undefined,
     });
     setOut(
       JSON.stringify(
@@ -101,17 +144,47 @@ function App() {
   };
   const doHierarchy = async () => {
     const node = await scanHierarchy({
-      startKey: b("a"),
-      endKey: b("z"),
-      endInclusive: true,
+      startKey: scanStart ? b(scanStart) : undefined,
+      endKey: scanEnd ? b(scanEnd) : undefined,
+      startInclusive: scanStartInc,
+      endInclusive: scanEndInc,
+      reverse: scanReverse,
     });
     const n = await countHierarchy({
-      startKey: b("a"),
-      endKey: b("z"),
-      endInclusive: true,
+      startKey: scanStart ? b(scanStart) : undefined,
+      endKey: scanEnd ? b(scanEnd) : undefined,
+      startInclusive: scanStartInc,
+      endInclusive: scanEndInc,
+      reverse: scanReverse,
     });
     setOut(`hierarchy: ${summarizeHierarchy(node)}\nleavesTotalEntries: ${n}`);
   };
+
+  const doBatch = async () => {
+    try {
+      const parsed = JSON.parse(opsJson || "{}");
+      const setOps: [Uint8Array, Uint8Array][] = Array.isArray(parsed.set)
+        ? parsed.set.map((pair: [string, string]) => [b(pair[0]), b(pair[1])])
+        : [];
+      const delOps: Uint8Array[] = Array.isArray(parsed.del)
+        ? parsed.del.map((key: string) => b(key))
+        : [];
+      if (setOps.length === 0 && delOps.length === 0) {
+        setOut("No ops to apply");
+        return;
+      }
+      const next = await mutate({
+        ...(setOps.length ? { set: setOps } : {}),
+        ...(delOps.length ? { del: delOps } : {}),
+      });
+      setOut(JSON.stringify({ ok: true, op: "mutate", root: next }, null, 2));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setOut(`Batch parse/apply error: ${msg}`);
+    }
+  };
+
+  // Branch actions removed
 
   return (
     <div className="container">
@@ -149,17 +222,199 @@ function App() {
           Get
         </button>
         <button id="scan" onClick={doScan} disabled={!ready}>
-          Scan a..z
+          Scan
         </button>
         <button id="count" onClick={doCount} disabled={!ready}>
           Count a..z
         </button>
         <button id="diff" onClick={doDiff} disabled={!ready}>
-          Diff (self)
+          Diff
         </button>
         <button id="hierarchy" onClick={doHierarchy} disabled={!ready}>
-          Hierarchy a..z
+          Hierarchy
         </button>
+      </div>
+      <div className="controls">
+        <fieldset>
+          <legend>Scan/Count Options</legend>
+          <label>
+            Start{" "}
+            <input
+              id="scan-start"
+              value={scanStart}
+              onChange={(e) => setScanStart(e.target.value)}
+              placeholder="a"
+            />
+          </label>
+          <label>
+            End{" "}
+            <input
+              id="scan-end"
+              value={scanEnd}
+              onChange={(e) => setScanEnd(e.target.value)}
+              placeholder="z"
+            />
+          </label>
+          <label>
+            <input
+              id="scan-start-inclusive"
+              type="checkbox"
+              checked={scanStartInc}
+              onChange={(e) => setScanStartInc(e.target.checked)}
+            />
+            startInclusive
+          </label>
+          <label>
+            <input
+              id="scan-end-inclusive"
+              type="checkbox"
+              checked={scanEndInc}
+              onChange={(e) => setScanEndInc(e.target.checked)}
+            />
+            endInclusive
+          </label>
+          <label>
+            <input
+              id="scan-reverse"
+              type="checkbox"
+              checked={scanReverse}
+              onChange={(e) => setScanReverse(e.target.checked)}
+            />
+            reverse
+          </label>
+          <label>
+            Offset{" "}
+            <input
+              id="scan-offset"
+              value={scanOffset}
+              onChange={(e) => setScanOffset(e.target.value)}
+              placeholder=""
+            />
+          </label>
+          <label>
+            Limit{" "}
+            <input
+              id="scan-limit"
+              value={scanLimit}
+              onChange={(e) => setScanLimit(e.target.value)}
+              placeholder=""
+            />
+          </label>
+        </fieldset>
+      </div>
+      <div className="controls">
+        <fieldset>
+          <legend>Diff Options</legend>
+          <label>
+            Left root{" "}
+            <input
+              id="diff-left"
+              value={diffLeft}
+              onChange={(e) => setDiffLeft(e.target.value)}
+              placeholder="defaults to current"
+            />
+          </label>
+        </fieldset>
+      </div>
+      <div className="controls">
+        <fieldset>
+          <legend>Batch Ops (JSON)</legend>
+          <textarea
+            id="ops-json"
+            value={opsJson}
+            onChange={(e) => setOpsJson(e.target.value)}
+            rows={4}
+            style={{ width: "100%" }}
+          />
+          <div>
+            <button id="mutate" onClick={doBatch} disabled={!ready}>
+              Apply Ops
+            </button>
+          </div>
+        </fieldset>
+      </div>
+      {/* Branch controls removed */}
+      <div className="controls">
+        <fieldset>
+          <legend>Live Value Fingerprint</legend>
+          <label>
+            Key{" "}
+            <input
+              id="live-key"
+              value={liveKey}
+              onChange={(e) => setLiveKey(e.target.value)}
+              placeholder="subscription key"
+            />
+          </label>
+        </fieldset>
+      </div>
+      <div className="controls">
+        <fieldset>
+          <legend>Live Range Options</legend>
+          <label>
+            Start{" "}
+            <input
+              id="live-scan-start"
+              value={liveScanStart}
+              onChange={(e) => setLiveScanStart(e.target.value)}
+              placeholder="a"
+            />
+          </label>
+          <label>
+            End{" "}
+            <input
+              id="live-scan-end"
+              value={liveScanEnd}
+              onChange={(e) => setLiveScanEnd(e.target.value)}
+              placeholder="z"
+            />
+          </label>
+          <label>
+            <input
+              id="live-scan-start-inclusive"
+              type="checkbox"
+              checked={liveScanStartInc}
+              onChange={(e) => setLiveScanStartInc(e.target.checked)}
+            />
+            startInclusive
+          </label>
+          <label>
+            <input
+              id="live-scan-end-inclusive"
+              type="checkbox"
+              checked={liveScanEndInc}
+              onChange={(e) => setLiveScanEndInc(e.target.checked)}
+            />
+            endInclusive
+          </label>
+          <label>
+            <input
+              id="live-scan-reverse"
+              type="checkbox"
+              checked={liveScanReverse}
+              onChange={(e) => setLiveScanReverse(e.target.checked)}
+            />
+            reverse
+          </label>
+          <label>
+            Offset{" "}
+            <input
+              id="live-scan-offset"
+              value={liveScanOffset}
+              onChange={(e) => setLiveScanOffset(e.target.value)}
+              placeholder=""
+            />
+          </label>
+          <label>
+            Limit{" "}
+            <input
+              id="live-scan-limit"
+              value={liveScanLimit}
+              onChange={(e) => setLiveScanLimit(e.target.value)}
+              placeholder=""
+            />
+          </label>
+        </fieldset>
       </div>
       <div>
         Current root: <code id="root">{rootHash}</code>

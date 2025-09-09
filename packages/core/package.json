@@ -27,7 +27,6 @@
   },
   "dependencies": {
     "ptri": "^1.0.7",
-    "vitest": "^3.2.4",
     "vunt": "^1.0.1"
   },
   "devDependencies": {
@@ -38,6 +37,7 @@
     "@vitejs/plugin-react": "^5.0.2",
     "typescript": "^5.5.4",
     "vite": "^5.1.4",
-    "vite-plugin-dts": "^4.5.4"
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^3.2.4"
   }
 }

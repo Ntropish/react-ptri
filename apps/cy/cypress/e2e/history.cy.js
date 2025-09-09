@@ -111,12 +111,12 @@ describe("react-ptri history APIs", () => {
       .invoke("text")
       .should((t) => expect(parseInt(t.trim(), 10)).to.equal(0));
 
-  // Undo the checkout => should revert to the pre-checkout current (root1)
+    // Undo the checkout => should revert to the pre-checkout current (root1)
     cy.get("#undo").click();
-  cy.get("@root1").then((r1) => {
+    cy.get("@root1").then((r1) => {
       cy.get("#root", { timeout: 10000 })
-    .invoke("text")
-    .should((t) => expect(t.trim()).to.equal(r1));
+        .invoke("text")
+        .should((t) => expect(t.trim()).to.equal(r1));
     });
 
     // Redo stack should now include the checkout commit

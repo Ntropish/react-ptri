@@ -1,8 +1,8 @@
-# react-ptri
+# @ptri/react
 
 Find the prime directive at `docs/prime-directive.md`
 
-The project you will be working on is called `react-ptri`
+The project you will be working on is called `@ptri/react`
 
 `ptri` is an immutable prolly tree with content-addressed storage and content-defined chunking. Designed for fast range scans, immutable roots, and efficient large-value storage via FastCDC.
 
@@ -30,4 +30,4 @@ Contains a web application which will host our core library so that Cypress can 
 
 #### core
 
-Contains the core library for `react-ptri`.
+Contains the core library for `@ptri/react`.

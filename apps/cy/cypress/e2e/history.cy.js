@@ -1,4 +1,4 @@
-describe("react-ptri history APIs", () => {
+describe("@ptri/react history APIs", () => {
   it("exposes history offset, can page undo/redo stacks, and supports checkout with undo", () => {
     cy.visit("/");
     cy.get("#status").should("contain", "Ready");

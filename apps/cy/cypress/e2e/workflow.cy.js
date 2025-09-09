@@ -1,6 +1,6 @@
 const { faker } = require("@faker-js/faker");
 
-describe("react-ptri workflow", () => {
+describe("@ptri/react workflow", () => {
   it("creates a user and orders, verifies counts/scan, uses undo/redo, and checks live fingerprints", () => {
     cy.visit("/");
     cy.get("#status").should("contain", "Ready");

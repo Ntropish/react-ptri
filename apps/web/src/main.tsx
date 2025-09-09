@@ -8,7 +8,7 @@ import PtriHistoryProvider, {
   type HierarchyNode,
   usePtriValue,
   usePtriRange,
-} from "react-ptri";
+} from "@ptri/react";
 
 function App() {
   const {
@@ -212,7 +212,7 @@ function App() {
 
   return (
     <div className="container">
-      <h1>react-ptri demo</h1>
+      <h1>@ptri/react demo</h1>
       <div id="status">{ready ? "Ready" : "Initializing..."}</div>
       <div className="controls">
         <button id="undo" onClick={() => void undo()} disabled={!canUndo}>

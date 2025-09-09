@@ -1,8 +1,8 @@
-# react-ptri
+# @ptri/react
 
 ### Deterministic, content-addressed state management for React with live fingerprints
 
-react-ptri is a thin React layer over a content-addressed, immutable key–value index (ptri) backed by an OPFS chunk store (vunt). Every mutation yields a new root hash (commit) and every read (point or range) can be summarized by a deterministic fingerprint that only changes when the underlying bytes change within the specified bounds. The provider maintains an in-app linear history of roots for undo/redo, and hooks subscribe to read fingerprints to avoid unnecessary re-renders.
+@ptri/react is a thin React layer over a content-addressed, immutable key–value index (ptri) backed by an OPFS chunk store (vunt). Every mutation yields a new root hash (commit) and every read (point or range) can be summarized by a deterministic fingerprint that only changes when the underlying bytes change within the specified bounds. The provider maintains an in-app linear history of roots for undo/redo, and hooks subscribe to read fingerprints to avoid unnecessary re-renders.
 
 ## Quick start
 
@@ -16,7 +16,7 @@ import PtriHistoryProvider, {
   usePtriRange,
   b, // encodeUtf8
   s, // decodeUtf8
-} from "react-ptri";
+} from "@ptri/react";
 
 function Demo() {
   const { ready, rootHash, mutate, undo, redo, get, scan } = usePtriHistory();
@@ -63,7 +63,7 @@ Notes
 
 ## Fingerprints: precise, deterministic change detection
 
-ptri exposes content-based fingerprints for both point reads and range scans. react-ptri uses these to drive reactivity:
+ptri exposes content-based fingerprints for both point reads and range scans. @ptri/react uses these to drive reactivity:
 
 - Point reads: `fingerprintGet(key)` changes iff the value bytes at `key` change (including transitions between missing/value and empty-string/value). Identical rewrites yield the same fingerprint.
 - Range scans: `fingerprintScan(opts)` changes iff the multiset/ordering of entries within the specified range and options changes. Options such as `startKey/endKey`, inclusivity flags, `reverse`, `offset`, and `limit` are all part of the fingerprint domain, so toggling them deterministically changes the result.
@@ -74,14 +74,14 @@ These fingerprints make it trivial to implement stable subscriptions: hooks poll
 ## Core concepts
 
 - Immutable root history: Each mutation creates a new root hash (a content-addressed commit). The provider keeps a linear `timeline` and an `index`, enabling `undo`/`redo` without branching.
-- OPFS-backed storage: Chunks are persisted using `vunt` in the browser’s Origin Private File System. History metadata (timeline/index) is best-effort persisted in `react-ptri/history.json` for continuity across sessions.
+- OPFS-backed storage: Chunks are persisted using `vunt` in the browser’s Origin Private File System. History metadata (timeline/index) is best-effort persisted in `@ptri/react/history.json` for continuity across sessions.
 - Byte-first API: The core API speaks Uint8Array for keys/values to avoid encoding ambiguity. Helpers `b`/`s` are provided for UTF-8 conversions.
 - Bounded range scans: Range queries are defined by `[startKey, endKey]` with inclusive flags, `offset`, `limit`, and `reverse`. The same options that shape results also shape fingerprints.
 - Structural introspection: Hierarchical scan and counts expose the Merkleized tree structure for debugging or analytics.
 
 ## API reference
 
-All exports are available from `react-ptri`. Default export is the provider component.
+All exports are available from `@ptri/react`. Default export is the provider component.
 
 ### PtriHistoryProvider (default export)
 
@@ -92,7 +92,7 @@ Props
 ```ts
 type LibraryConfig = {
   mainBranchName?: string; // reserved for future, currently linear history
-  storeName?: string; // OPFS store name; default "react-ptri"
+  storeName?: string; // OPFS store name; default "@ptri/react"
   treeDefinition?: { targetFanout: number; minFanout: number };
   valueChunking?: unknown;
   coordinationWorkerUrl?: string; // reserved for cross-tab coordination
@@ -233,7 +233,7 @@ function usePtriRange(opts?: ScanOptions): UsePtriRangeState;
 
 ```ts
 // UTF-8 helpers (aliases provided)
-import { encodeUtf8, decodeUtf8, b, s } from "react-ptri";
+import { encodeUtf8, decodeUtf8, b, s } from "@ptri/react";
 
 function b(str: string): Uint8Array; // alias of encodeUtf8
 function s(bytes: Uint8Array): string; // alias of decodeUtf8

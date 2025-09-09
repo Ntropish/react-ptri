@@ -65,7 +65,7 @@ export type HistoryScanResult = { data: RootHash[]; total: number };
 
 export type LibraryConfig = {
   mainBranchName?: string; // default "main"
-  storeName?: string; // OPFS store name; default "react-ptri"
+  storeName?: string; // OPFS store name; default "@ptri/react"
   treeDefinition?: { targetFanout: number; minFanout: number };
   valueChunking?: unknown;
   coordinationWorkerUrl?: string; // SharedWorker URL for cross-tab coordination
@@ -120,7 +120,7 @@ export function PtriHistoryProvider({
   children: React.ReactNode;
   config?: LibraryConfig;
 }) {
-  const { storeName = "react-ptri", treeDefinition, valueChunking } = config;
+  const { storeName = "@ptri/react", treeDefinition, valueChunking } = config;
 
   const [ready, setReady] = useState(false);
   const clientRef = useRef<PtriClient | null>(null);
@@ -145,7 +145,7 @@ export function PtriHistoryProvider({
         const rootDir = await navigator.storage?.getDirectory?.();
         if (rootDir) {
           // @ts-ignore
-          const folder = await rootDir.getDirectoryHandle?.("react-ptri", {
+          const folder = await rootDir.getDirectoryHandle?.("@ptri/react", {
             create: false,
           });
           if (folder) {
@@ -218,7 +218,7 @@ export function PtriHistoryProvider({
         const rootDir = await navigator.storage?.getDirectory?.();
         if (!rootDir) return;
         // @ts-ignore
-        const folder = await rootDir.getDirectoryHandle?.("react-ptri", {
+        const folder = await rootDir.getDirectoryHandle?.("@ptri/react", {
           create: true,
         });
         // @ts-ignore

@@ -1,7 +1,7 @@
-describe("react-ptri demo", () => {
+describe("@ptri/react demo", () => {
   it("can set, get, and scan using real OPFS-backed store", () => {
     cy.visit("/");
-    cy.contains("react-ptri demo");
+    cy.contains("@ptri/react demo");
     cy.get("#status").should("contain", "Ready");
 
     // initial root is shown

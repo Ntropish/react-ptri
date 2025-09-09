@@ -10,7 +10,7 @@ export default defineConfig({
     ssr: true,
     lib: {
       entry: "src/index.ts",
-      name: "react-ptri",
+      name: "@ptri/react",
       formats: ["es", "cjs"],
     },
     outDir: "dist",
